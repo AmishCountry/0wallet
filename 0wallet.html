@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0wallet: AmishCountry's off-grid seed generator v0.9</title>
+<style>
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #0f1419; color: #e7ecf3; line-height: 1.5;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 20px; }
+  h2 { font-size: 1rem; font-weight: 600; margin: 0 0 12px; }
+  p { margin: 0 0 12px; }
+  .banner { padding: 12px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; }
+  .banner.online { background: #450a0a; border: 1px solid #991b1b; color: #fca5a5; }
+  .banner.online a { color: #fecaca; }
+  .banner.offline { background: #052e16; border: 1px solid #166534; color: #86efac; }
+  .muted { color: #8b9bb4; font-size: 0.9rem; }
+  .card { background: #1a2332; border: 1px solid #2d3a4f; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .row { margin-bottom: 12px; }
+  .btn {
+    display: inline-block; font: inherit; font-weight: 600; font-size: 0.9rem;
+    padding: 10px 18px; border-radius: 8px; border: 0; cursor: pointer;
+    margin: 0 8px 8px 0; vertical-align: middle; line-height: 1.25;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: #3b82f6; color: #fff; }
+  .btn-secondary { background: #2d3a4f; color: #e7ecf3; }
+  .btn-danger { background: transparent; color: #8b9bb4; border: 1px solid #2d3a4f; }
+  .btn.selected { box-shadow: 0 0 0 2px #93c5fd; }
+  .badge {
+    display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 2px 8px;
+    border-radius: 999px; background: #2d3a4f; color: #8b9bb4; margin-left: 6px; vertical-align: middle;
+  }
+  .badge.done { background: #14532d; color: #86efac; }
+  .badge.active { background: #1e3a5f; color: #93c5fd; }
+  .bar { height: 6px; background: #2d3a4f; border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
+  .bar > span { display: block; height: 100%; width: 0; background: #ef4444; }
+  .set { margin-bottom: 12px; overflow: hidden; }
+  .set-label { float: left; width: 70px; font-size: 0.8rem; color: #8b9bb4; padding-top: 10px; }
+  .set-status { float: right; width: 48px; text-align: right; font-size: 0.75rem; color: #8b9bb4; padding-top: 10px; }
+  .set-status.ok { color: #22c55e; }
+  .dice { margin: 0 52px 0 74px; overflow: hidden; }
+  .dice input {
+    float: left; width: 8.5%; max-width: 42px; height: 36px; margin: 0 1% 4px 0;
+    text-align: center; font-size: 1rem; font-weight: 600; background: #0d1117;
+    border: 1px solid #2d3a4f; border-radius: 6px; color: #e7ecf3; box-sizing: border-box;
+  }
+  .dice input:focus { border-color: #3b82f6; outline: 0; }
+  .dice input.valid { border-color: #22c55e; }
+  .dice input.invalid { border-color: #ef4444; }
+  .actions { margin-top: 16px; overflow: hidden; }
+  .entropy-pill {
+    display: inline-block; vertical-align: middle; min-height: 20px; padding: 10px 18px;
+    border-radius: 999px; background: #2d3a4f; color: #8b9bb4; font-size: 0.9rem;
+    font-weight: 600; margin: 0 8px 8px 0; line-height: 1.25;
+  }
+  .entropy-pill.done { background: #14532d; color: #86efac; }
+  .entropy-pill.active { background: #1e3a5f; color: #93c5fd; }
+  .hidden { display: none; }
+  .mnemonic { overflow: hidden; margin: 12px 0; }
+  .word {
+    float: left; width: 46%; margin: 0 2% 8px 0; background: #0d1117; border: 1px solid #2d3a4f;
+    border-radius: 8px; padding: 8px 10px; font-family: ui-monospace, Consolas, "Courier New", monospace;
+    font-size: 0.95rem; box-sizing: border-box;
+  }
+  .word .n { color: #8b9bb4; font-size: 0.7rem; margin-right: 6px; }
+  .field { width: 100%; box-sizing: border-box; }
+  input.field, textarea.field {
+    background: #0d1117; border: 1px solid #2d3a4f; border-radius: 8px; color: #e7ecf3;
+    font: inherit; font-size: 0.95rem; padding: 10px 12px;
+  }
+  textarea.field {
+    min-height: 110px; resize: vertical;
+    font-family: ui-monospace, Consolas, "Courier New", monospace; line-height: 1.6;
+  }
+  input.field:focus, textarea.field:focus { border-color: #3b82f6; outline: 0; }
+  .meta { overflow: hidden; margin-top: 10px; margin-bottom: 6px; font-size: 0.8rem; color: #8b9bb4; }
+  .meta .left { float: left; }
+  .meta .right { float: right; font-weight: 600; }
+  .meta .right.ok { color: #22c55e; }
+  .meta .right.bad { color: #fca5a5; }
+  .hint { color: #8b9bb4; font-size: 0.85rem; margin-bottom: 12px; }
+  .addr-options { margin-top: 8px; overflow: hidden; }
+  .addr-opt {
+    float: left; width: 31%; margin: 0 2% 16px 0; box-sizing: border-box;
+    min-width: 160px;
+  }
+  .addr-opt .btn { margin: 0 0 8px 0; width: 100%; box-sizing: border-box; }
+  .addr-desc {
+    margin: 0;
+    color: #8b9bb4;
+    font-size: 0.8rem;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+  .addr-item {
+    font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 0.8rem;
+    background: #0d1117; border: 1px solid #2d3a4f; border-radius: 6px; padding: 8px 10px;
+    margin-bottom: 6px; word-break: break-all;
+  }
+  .addr-item .n { color: #8b9bb4; margin-right: 8px; }
+  .err { color: #fca5a5; font-size: 0.85rem; margin-top: 12px; }
+  .compat-warn {
+    background: #422006; border: 1px solid #92400e; color: #fde68a;
+    padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem;
+  }
+  @media (max-width: 600px) {
+    .set-label, .set-status { float: none; width: auto; display: block; padding-top: 0; }
+    .dice { margin: 6px 0; }
+    .dice input { width: 9%; height: 32px; font-size: 0.9rem; }
+    .word { width: 100%; margin-right: 0; }
+    .addr-opt { float: none; width: 100%; margin: 0 0 16px 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>0wallet: AmishCountry's off-grid seed generator v0.9</h1>
+  <div id="compatWarn" class="compat-warn hidden"></div>
+  <div id="netStatus" class="banner offline" aria-live="polite">Checking network…</div>
+  <p class="muted">Choose a path:</p>
+  <div class="row">
+    <button type="button" class="btn btn-primary" id="pathGenerateBtn">Generate seed</button>
+    <button type="button" class="btn btn-secondary" id="pathVerifyBtn">Verify existing seed</button>
+  </div>
+  <div id="generatePath" class="hidden">
+    <p class="muted">This tool will generate a bitcoin seed phrase from 100 dice rolls. Consider rolling 10 dice simultaneously to speed up the process. After generating the seed phrase you will have the option to generate bitcoin addresses from that seed phrase.</p>
+    <div class="card">
+      <h2>Dice rolls <span class="badge" id="progressBadge">0 / 100</span></h2>
+      <div class="bar"><span id="progressFill"></span></div>
+      <div id="sets"></div>
+      <div class="actions">
+        <span class="entropy-pill" id="entropyBadge">0.00 bits of entropy</span>
+        <button type="button" class="btn btn-primary" id="generateBtn" disabled>Generate 24-word phrase</button>
+        <button type="button" class="btn btn-danger" id="clearBtn">Clear all</button>
+      </div>
+    </div>
+  </div>
+  <div id="verifyPath" class="hidden">
+    <p class="muted">Enter an existing 12- or 24-word BIP39 seed phrase to continue with passphrase and address generation.</p>
+    <div class="card">
+      <h2>Existing seed phrase</h2>
+      <p class="hint">Type or paste 12 or 24 words separated by spaces.</p>
+      <textarea class="field" id="seedInput" spellcheck="false" autocomplete="off" placeholder="word1 word2 word3 …"></textarea>
+      <div class="meta">
+        <span class="left" id="seedWordStatus">0 words</span>
+        <span class="right" id="seedValidStatus"></span>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="verifyContinueBtn" disabled>Continue</button>
+        <button type="button" class="btn btn-danger" id="verifyClearBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+  <div class="card hidden" id="result">
+    <h2>Seed phrase</h2>
+    <div class="mnemonic" id="mnemonic"></div>
+    <div class="actions">
+      <button type="button" class="btn btn-secondary" id="copyBtn">Copy phrase</button>
+    </div>
+  </div>
+  <div class="card hidden" id="passphraseSection">
+    <h2>Passphrase <span class="badge" id="ppBadge">0 / 14</span></h2>
+    <div class="hint">
+      <p>Enter a passphrase of at least 14 characters.</p>
+      <p>Note that you can have one seed phrase with several different passphrases. Each seed + passphrase generates different addresses.</p>
+    </div>
+    <input type="text" class="field" id="passphraseInput" autocomplete="off" spellcheck="false" placeholder="Passphrase (min. 14 characters)">
+    <div class="meta">
+      <span class="left">Character Count</span>
+      <span class="right" id="ppCounter">0/14</span>
+    </div>
+    <div class="bar"><span id="ppBarFill"></span></div>
+  </div>
+  <div class="card hidden" id="addrSection">
+    <h2>Bitcoin addresses</h2>
+    <p class="muted">Click to generate bitcoin addresses from your seed phrase.</p>
+    <div class="addr-options">
+      <div class="addr-opt">
+        <button type="button" class="btn btn-primary" id="segwitBtn">Segwit</button>
+        <p class="addr-desc">Legacy. Greatest compatibility (BIP84, activated 2017).</p>
+      </div>
+      <div class="addr-opt">
+        <button type="button" class="btn btn-primary" id="taprootBtn">Taproot</button>
+        <p class="addr-desc">Privacy enhancements (BIP86, activated 2021).</p>
+      </div>
+      <div class="addr-opt">
+        <button type="button" class="btn btn-primary" id="silentBtn">Silent payments</button>
+        <p class="addr-desc">Enhances privacy by allowing payment to an address without revealing the recipient's identity. Low compatibility.</p>
+      </div>
+    </div>
+    <div id="addrList" class="hidden">
+      <h2 id="addrListTitle" style="margin-top:16px;color:#8b9bb4;font-size:0.85rem;"></h2>
+      <div id="addrItems"></div>
+    </div>
+    <div class="err hidden" id="addrError"></div>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+
+  if (!Math.log2) Math.log2 = function (x) { return Math.log(x) / Math.LN2; };
+
+  function nfkd(s) {
+    s = String(s);
+    try { if (typeof s.normalize === "function") return s.normalize("NFKD"); } catch (e) {}
+    return s;
+  }
+  function hasBigInt() {
+    try { return typeof BigInt === "function" && typeof 1n !== "undefined"; } catch (e) { return false; }
+  }
+  function trimStr(s) { return String(s).replace(/^\s+|\s+$/g, ""); }
+  function hasClass(el, c) { return el && (" " + el.className + " ").indexOf(" " + c + " ") !== -1; }
+  function addClass(el, c) { if (el && !hasClass(el, c)) el.className = trimStr(el.className + " " + c); }
+  function removeClass(el, c) {
+    if (!el) return;
+    el.className = trimStr((" " + el.className + " ").replace(new RegExp(" " + c + " ", "g"), " "));
+  }
+  function show(el) { removeClass(el, "hidden"); }
+  function hide(el) { addClass(el, "hidden"); }
+  function setText(el, t) { if (el) el.textContent = t; }
+  function on(el, ev, fn) {
+    if (!el) return;
+    if (el.addEventListener) el.addEventListener(ev, fn, false);
+    else if (el.attachEvent) el.attachEvent("on" + ev, fn);
+  }
+  function copyText(text, done) {
+    if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { fallback(); });
+    } else fallback();
+    function fallback() {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = text; ta.setAttribute("readonly", "");
+        ta.style.position = "fixed"; ta.style.left = "-9999px";
+        document.body.appendChild(ta); ta.select();
+        var ok = false;
+        try { ok = document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta); done(ok);
+      } catch (e2) { done(false); }
+    }
+  }
+  function utf8Bytes(str) {
+    str = String(str);
+    if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(str);
+    var out = [], i, c;
+    for (i = 0; i < str.length; i++) {
+      c = str.charCodeAt(i);
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+      else if (c < 0xd800 || c >= 0xe000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      else {
+        i++; c = 0x10000 + (((c & 0x3ff) << 10) | (str.charCodeAt(i) & 0x3ff));
+        out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      }
+    }
+    return new Uint8Array(out);
+  }
+  function bytesToHex(b) {
+    var s = "", i;
+    for (i = 0; i < b.length; i++) s += ("0" + b[i].toString(16)).slice(-2);
+    return s;
+  }
+
+  var compatEl = document.getElementById("compatWarn");
+  var cryptoOk = hasBigInt();
+  if (!cryptoOk) {
+    show(compatEl);
+    setText(compatEl, "This browser does not support BigInt, which is required for key derivation. Use a current browser (Chrome, Firefox, Safari, or Edge).");
+  }
+
+  var WORDLIST = ("abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis baby bachelor bacon badge bag balance balcony ball bamboo banana banner bar barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone bonus book boost border boring borrow boss bottom bounce box boy bracket brain brand brass brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget buffalo build bulb bulk bullet bundle bunker burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp can canal cancel candy cannon canoe canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash casino castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census century cereal certain chair chalk champion change chaos chapter charge chase chat cheap check cheese chef cherry chest chicken chief child chimney choice choose chronic chuckle chunk churn cigar cinnamon circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach coast coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crater crawl crazy cream credit creek crew cricket crime crisp critic crop cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology economy edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark embody embrace emerge emotion employ empower empty enable enact end endless endorse enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip era erase erode erosion error erupt escape essay essence estate eternal ethics evidence evil evoke evolve exact example excess exchange excite exclude excuse execute exercise exhaust exhibit exile exist exit exotic expand expect expire explain expose express extend extra eye eyebrow fabric face faculty fade faint faith fall false fame family famous fan fancy fantasy farm fashion fat fatal father fatigue fault favorite feature february federal fee feed feel female fence festival fetch fever few fiber fiction field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil fold follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frost frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garage garbage garden garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass glide glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel gossip govern gown grab grace grain grant grape grass gravity great green grid grief grit grocery group grow grunt guard guess guide guilt guitar gun gym habit hair half hammer hamster hand happy harbor hard harsh harvest hat have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse hospital host hotel hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon idea identify idle ignore ill illegal illness image imitate immense immune impact impose improve impulse inch include income increase index indicate indoor industry infant inflict inform inhale inherit initial inject injury inmate inner innocent input inquiry insane insect inside inspire install intact interest into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kidney kind kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab label labor ladder lady lake lamp language laptop large later latin laugh laundry lava law lawn lawsuit layer lazy leader leaf learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift light like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lumber lunar lunch luxury lyrics machine mad magic magnet maid mail main major make mammal man manage mandate mango mansion manual maple marble march margin marine market marriage mask mass master match material math matrix matter maximum maze meadow mean measure meat mechanic medal media melody melt member memory mention menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle mirror misery miss mistake mix mixed mixture mobile model modify mom moment monitor monkey monster month moon moral more morning mosquito mother motion motor mountain mouse move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery myth naive name napkin narrow nasty nation nature near neck need negative neglect neither nephew nerve nest net network neutral never news next nice night noble noise nominee noodle normal north nose notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure observe obtain obvious occur ocean october odor off offer office often oil okay old olive olympic omit once one onion online only open opera opinion oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outer output outside oval oven over own owner oxygen oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patient patrol pattern pause pave payment peace peanut pear peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony pool popular portion position possible post potato pottery poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp pulse pumpkin punch pupil puppy purchase purity purpose purse push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rail rain raise rally ramp ranch random range rapid rare rate rather raven raw razor ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm rib ribbon rice rich ride ridge rifle right rigid ring riot ripple risk ritual rival river road roast robot robust rocket romance roof rookie room rose rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save say scale scan scare scatter scene scheme school science scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense sentence series service session settle setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling sick side siege sight sign silent silk silly silver similar simple since sing siren sister situate six size skate sketch ski skill skin skirt skull slab slam sleep slender slice slide slight slim slogan slot slow slush small smart smile smoke smooth snack snake snap sniff snow soap soccer social sock soda soft solar soldier solid solution solve someone song soon sorry sort soul sound soup source south space spare spatial spawn speak special speed spell spend sphere spice spider spike spin spirit split spoil sponsor spoon sport spot spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stool story stove strategy street strike strong struggle student stuff stumble style subject submit subway success such sudden suffer sugar suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise surround survey suspect sustain swallow swamp swap swarm swear sweet swift swim swing switch sword symbol symptom syrup system table tackle tag tail talent talk tank tape target task taste tattoo taxi teach team tell ten tenant tennis tent term test text thank that theme then theory there they thing this thought three thrive throw thumb thunder ticket tide tiger tilt timber time tiny tip tired tissue title toast tobacco today toddler toe together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck true truly trumpet trust truth try tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique unit universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban urge usage use used useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb verify version very vessel veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp waste water wave way wealth weapon wear weasel weather web wedding weekend weird welcome west wet whale what wheat wheel when where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word work world worry worth wrap wreck wrestle wrist write wrong yard year yellow you young youth zebra zero zone zoo").split(" ");
+
+  if (WORDLIST.length !== 2048) {
+    show(compatEl);
+    setText(compatEl, "Internal error: BIP39 wordlist length is " + WORDLIST.length + " (expected 2048). Do not use this build.");
+    cryptoOk = false;
+  }
+
+  var WORD_INDEX = {};
+  var wi;
+  for (wi = 0; wi < WORDLIST.length; wi++) {
+    if (WORD_INDEX[WORDLIST[wi]] !== undefined) {
+      show(compatEl);
+      setText(compatEl, "Internal error: duplicate wordlist entry.");
+      cryptoOk = false;
+    }
+    WORD_INDEX[WORDLIST[wi]] = wi;
+  }
+
+  var MIN_PASSPHRASE = 14;
+  var BITS_PER_D6 = Math.log2(6);
+  var TOTAL_SETS = 10;
+  var DICE_PER_SET = 10;
+  var TOTAL = TOTAL_SETS * DICE_PER_SET;
+  var selfTestPassed = false;
+
+  function sha256(bytes) {
+    var K = [
+      0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+      0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+      0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+      0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+      0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+      0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+      0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+      0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+    ];
+    var H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    var bitLen = bytes.length * 8;
+    var totalLen = bytes.length + 1 + 8;
+    totalLen += (64 - (totalLen % 64)) % 64;
+    var buf = new Uint8Array(totalLen);
+    buf.set(bytes); buf[bytes.length] = 0x80;
+    var view = new DataView(buf.buffer);
+    view.setUint32(totalLen - 4, bitLen >>> 0, false);
+    var W = new Array(64);
+    function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+    var i, t, a, b, c, d, e, f, g, h, s0, s1, S0, S1, ch, maj, t1, t2;
+    for (i = 0; i < totalLen; i += 64) {
+      for (t = 0; t < 16; t++) W[t] = view.getUint32(i + t * 4, false);
+      for (t = 16; t < 64; t++) {
+        s0 = rotr(W[t-15],7)^rotr(W[t-15],18)^(W[t-15]>>>3);
+        s1 = rotr(W[t-2],17)^rotr(W[t-2],19)^(W[t-2]>>>10);
+        W[t] = (W[t-16]+s0+W[t-7]+s1)>>>0;
+      }
+      a=H[0];b=H[1];c=H[2];d=H[3];e=H[4];f=H[5];g=H[6];h=H[7];
+      for (t = 0; t < 64; t++) {
+        S1 = rotr(e,6)^rotr(e,11)^rotr(e,25);
+        ch = (e&f)^((~e)&g);
+        t1 = (h+S1+ch+K[t]+W[t])>>>0;
+        S0 = rotr(a,2)^rotr(a,13)^rotr(a,22);
+        maj = (a&b)^(a&c)^(b&c);
+        t2 = (S0+maj)>>>0;
+        h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+      }
+      H[0]=(H[0]+a)>>>0;H[1]=(H[1]+b)>>>0;H[2]=(H[2]+c)>>>0;H[3]=(H[3]+d)>>>0;
+      H[4]=(H[4]+e)>>>0;H[5]=(H[5]+f)>>>0;H[6]=(H[6]+g)>>>0;H[7]=(H[7]+h)>>>0;
+    }
+    var out = new Uint8Array(32);
+    var ov = new DataView(out.buffer);
+    for (i = 0; i < 8; i++) ov.setUint32(i*4, H[i], false);
+    return out;
+  }
+
+  function sha512(message) {
+    var K = [
+      0x428a2f98d728ae22n,0x7137449123ef65cdn,0xb5c0fbcfec4d3b2fn,0xe9b5dba58189dbbcn,
+      0x3956c25bf348b538n,0x59f111f1b605d019n,0x923f82a4af194f9bn,0xab1c5ed5da6d8118n,
+      0xd807aa98a3030242n,0x12835b0145706fben,0x243185be4ee4b28cn,0x550c7dc3d5ffb4e2n,
+      0x72be5d74f27b896fn,0x80deb1fe3b1696b1n,0x9bdc06a725c71235n,0xc19bf174cf692694n,
+      0xe49b69c19ef14ad2n,0xefbe4786384f25e3n,0x0fc19dc68b8cd5b5n,0x240ca1cc77ac9c65n,
+      0x2de92c6f592b0275n,0x4a7484aa6ea6e483n,0x5cb0a9dcbd41fbd4n,0x76f988da831153b5n,
+      0x983e5152ee66dfabn,0xa831c66d2db43210n,0xb00327c898fb213fn,0xbf597fc7beef0ee4n,
+      0xc6e00bf33da88fc2n,0xd5a79147930aa725n,0x06ca6351e003826fn,0x142929670a0e6e70n,
+      0x27b70a8546d22ffcn,0x2e1b21385c26c926n,0x4d2c6dfc5ac42aedn,0x53380d139d95b3dfn,
+      0x650a73548baf63den,0x766a0abb3c77b2a8n,0x81c2c92e47edaee6n,0x92722c851482353bn,
+      0xa2bfe8a14cf10364n,0xa81a664bbc423001n,0xc24b8b70d0f89791n,0xc76c51a30654be30n,
+      0xd192e819d6ef5218n,0xd69906245565a910n,0xf40e35855771202an,0x106aa07032bbd1b8n,
+      0x19a4c116b8d2d0c8n,0x1e376c085141ab53n,0x2748774cdf8eeb99n,0x34b0bcb5e19b48a8n,
+      0x391c0cb3c5c95a63n,0x4ed8aa4ae3418acbn,0x5b9cca4f7763e373n,0x682e6ff3d6b2b8a3n,
+      0x748f82ee5defb2fcn,0x78a5636f43172f60n,0x84c87814a1f0ab72n,0x8cc702081a6439ecn,
+      0x90befffa23631e28n,0xa4506cebde82bde9n,0xbef9a3f7b2c67915n,0xc67178f2e372532bn,
+      0xca273eceea26619cn,0xd186b8c721c0c207n,0xeada7dd6cde0eb1en,0xf57d4f7fee6ed178n,
+      0x06f067aa72176fban,0x0a637dc5a2c898a6n,0x113f9804bef90daen,0x1b710b35131c471bn,
+      0x28db77f523047d84n,0x32caab7b40c72493n,0x3c9ebe0a15c9bebcn,0x431d67c49c100d4cn,
+      0x4cc5d4becb3e42b6n,0x597f299cfc657e2an,0x5fcb6fab3ad6faecn,0x6c44198c4a475817n
+    ];
+    var h0=0x6a09e667f3bcc908n,h1=0xbb67ae8584caa73bn,h2=0x3c6ef372fe94f82bn,h3=0xa54ff53a5f1d36f1n;
+    var h4=0x510e527fade682d1n,h5=0x9b05688c2b3e6c1fn,h6=0x1f83d9abfb41bd6bn,h7=0x5be0cd19137e2179n;
+    var MASK = 0xffffffffffffffffn;
+    function rotr(x,n){ return ((x>>BigInt(n))|(x<<BigInt(64-n)))&MASK; }
+    var bytes = message instanceof Uint8Array ? message : utf8Bytes(message);
+    var bitLen = BigInt(bytes.length) * 8n;
+    var totalLen = bytes.length + 1 + 16;
+    totalLen += (128 - (totalLen % 128)) % 128;
+    var buf = new Uint8Array(totalLen);
+    buf.set(bytes); buf[bytes.length] = 0x80;
+    var dv = new DataView(buf.buffer);
+    var hi = bitLen >> 64n, lo = bitLen & MASK;
+    dv.setUint32(totalLen - 16, Number((hi >> 32n) & 0xffffffffn), false);
+    dv.setUint32(totalLen - 12, Number(hi & 0xffffffffn), false);
+    dv.setUint32(totalLen - 8, Number((lo >> 32n) & 0xffffffffn), false);
+    dv.setUint32(totalLen - 4, Number(lo & 0xffffffffn), false);
+    function readU64(off) {
+      return ((BigInt(dv.getUint32(off, false)) << 32n) | BigInt(dv.getUint32(off + 4, false))) & MASK;
+    }
+    var i, t, a, b, c, d, e, f, g, h, s0, s1, S0, S1, ch, maj, t1, t2, W;
+    for (i = 0; i < totalLen; i += 128) {
+      W = new Array(80);
+      for (t = 0; t < 16; t++) W[t] = readU64(i + t * 8);
+      for (t = 16; t < 80; t++) {
+        s0 = rotr(W[t-15],1)^rotr(W[t-15],8)^(W[t-15]>>7n);
+        s1 = rotr(W[t-2],19)^rotr(W[t-2],61)^(W[t-2]>>6n);
+        W[t] = (W[t-16]+s0+W[t-7]+s1)&MASK;
+      }
+      a=h0;b=h1;c=h2;d=h3;e=h4;f=h5;g=h6;h=h7;
+      for (t = 0; t < 80; t++) {
+        S1 = rotr(e,14)^rotr(e,18)^rotr(e,41);
+        ch = (e&f)^((~e)&g);
+        t1 = (h+S1+ch+K[t]+W[t])&MASK;
+        S0 = rotr(a,28)^rotr(a,34)^rotr(a,39);
+        maj = (a&b)^(a&c)^(b&c);
+        t2 = (S0+maj)&MASK;
+        h=g;g=f;f=e;e=(d+t1)&MASK;d=c;c=b;b=a;a=(t1+t2)&MASK;
+      }
+      h0=(h0+a)&MASK;h1=(h1+b)&MASK;h2=(h2+c)&MASK;h3=(h3+d)&MASK;
+      h4=(h4+e)&MASK;h5=(h5+f)&MASK;h6=(h6+g)&MASK;h7=(h7+h)&MASK;
+    }
+    var out = new Uint8Array(64);
+    function write(off, v) {
+      for (var j = 7; j >= 0; j--) { out[off+j] = Number(v & 0xffn); v >>= 8n; }
+    }
+    write(0,h0);write(8,h1);write(16,h2);write(24,h3);write(32,h4);write(40,h5);write(48,h6);write(56,h7);
+    return out;
+  }
+
+  function hmacSha512(key, data) {
+    var block = 128;
+    var k = key instanceof Uint8Array ? key : utf8Bytes(key);
+    if (k.length > block) k = sha512(k);
+    var keyBlock = new Uint8Array(block); keyBlock.set(k);
+    var oKey = new Uint8Array(block), iKey = new Uint8Array(block), i;
+    for (i = 0; i < block; i++) { oKey[i] = keyBlock[i] ^ 0x5c; iKey[i] = keyBlock[i] ^ 0x36; }
+    var d = data instanceof Uint8Array ? data : utf8Bytes(data);
+    var inner = new Uint8Array(block + d.length); inner.set(iKey); inner.set(d, block);
+    var outer = new Uint8Array(block + 64); outer.set(oKey); outer.set(sha512(inner), block);
+    return sha512(outer);
+  }
+
+  function pbkdf2HmacSha512(password, salt, iterations, dkLen) {
+    var pass = typeof password === "string" ? utf8Bytes(password) : password;
+    var sal = typeof salt === "string" ? utf8Bytes(salt) : salt;
+    var hLen = 64, l = Math.ceil(dkLen / hLen);
+    var result = new Uint8Array(l * hLen);
+    var i, j, k, u, t, block;
+    for (i = 1; i <= l; i++) {
+      block = new Uint8Array(sal.length + 4);
+      block.set(sal);
+      block[sal.length] = (i>>>24)&0xff; block[sal.length+1]=(i>>>16)&0xff;
+      block[sal.length+2]=(i>>>8)&0xff; block[sal.length+3]=i&0xff;
+      u = hmacSha512(pass, block);
+      t = new Uint8Array(u);
+      for (j = 1; j < iterations; j++) {
+        u = hmacSha512(pass, u);
+        for (k = 0; k < hLen; k++) t[k] ^= u[k];
+      }
+      result.set(t, (i - 1) * hLen);
+    }
+    return result.subarray(0, dkLen);
+  }
+
+  function ripemd160(message) {
+    var bytes = message instanceof Uint8Array ? message : utf8Bytes(message);
+    var zl=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,7,4,13,1,10,6,15,3,12,0,9,5,2,14,11,8,3,10,14,4,9,15,8,1,2,7,0,6,13,11,5,12,1,9,11,10,0,8,12,4,13,3,7,15,14,5,6,2,4,0,5,9,7,12,2,10,14,1,3,8,11,6,15,13];
+    var zr=[5,14,7,0,9,2,11,4,13,6,15,8,1,10,3,12,6,11,3,7,0,13,5,10,14,15,8,12,4,9,1,2,15,5,1,3,7,14,6,9,11,8,12,2,10,0,4,13,8,6,4,1,3,11,15,0,5,12,2,13,9,7,10,14,12,15,10,4,1,5,8,7,6,2,13,14,0,3,9,11];
+    var sl=[11,14,15,12,5,8,7,9,11,13,14,15,6,7,9,8,7,6,8,13,11,9,7,15,7,12,15,9,11,7,13,12,11,13,6,7,14,9,13,15,14,8,13,6,5,12,7,5,11,12,14,15,14,15,9,8,9,14,5,6,8,6,5,12,9,15,5,11,6,8,13,12,5,12,13,14,11,8,5,6];
+    var sr=[8,9,9,11,13,15,15,5,7,7,8,11,14,14,12,6,9,13,15,7,12,8,9,11,7,7,12,7,6,15,13,11,9,7,15,11,8,6,6,14,12,13,5,14,13,13,7,5,15,5,8,11,14,14,6,14,6,9,12,9,12,5,15,8,8,5,12,9,12,5,14,6,8,13,6,5,15,13,11,11];
+    var hl=[0x00000000,0x5A827999,0x6ED9EBA1,0x8F1BBCDC,0xA953FD4E];
+    var hr=[0x50A28BE6,0x5C4DD124,0x6D703EF3,0x7A6D76E9,0x00000000];
+    function rotl(x,n){ return ((x<<n)|(x>>>(32-n)))>>>0; }
+    function f(j,x,y,z){
+      if(j<16)return(x^y^z)>>>0; if(j<32)return((x&y)|(~x&z))>>>0; if(j<48)return((x|(~y))^z)>>>0;
+      if(j<64)return((x&z)|(y&~z))>>>0; return(x^(y|(~z)))>>>0;
+    }
+    var bitLen=bytes.length*8;
+    var totalLen=bytes.length+1+8; totalLen+=(64-(totalLen%64))%64;
+    var buf=new Uint8Array(totalLen); buf.set(bytes); buf[bytes.length]=0x80;
+    var dv=new DataView(buf.buffer);
+    dv.setUint32(totalLen-8,bitLen>>>0,true); dv.setUint32(totalLen-4,Math.floor(bitLen/0x100000000),true);
+    var h0=0x67452301,h1=0xEFCDAB89,h2=0x98BADCFE,h3=0x10325476,h4=0xC3D2E1F0;
+    var i, j, w, al,bl,cl,dl,el,ar,br,cr,dr,er, t;
+    for(i=0;i<totalLen;i+=64){
+      w=new Array(16);
+      for(j=0;j<16;j++) w[j]=dv.getUint32(i+j*4,true);
+      al=h0;bl=h1;cl=h2;dl=h3;el=h4;ar=h0;br=h1;cr=h2;dr=h3;er=h4;
+      for(j=0;j<80;j++){
+        t=(al+f(j,bl,cl,dl)+w[zl[j]]+hl[j>>4])>>>0; t=(rotl(t,sl[j])+el)>>>0;
+        al=el;el=dl;dl=rotl(cl,10);cl=bl;bl=t;
+        t=(ar+f(79-j,br,cr,dr)+w[zr[j]]+hr[j>>4])>>>0; t=(rotl(t,sr[j])+er)>>>0;
+        ar=er;er=dr;dr=rotl(cr,10);cr=br;br=t;
+      }
+      t=(h1+cl+dr)>>>0; h1=(h2+dl+er)>>>0; h2=(h3+el+ar)>>>0; h3=(h4+al+br)>>>0; h4=(h0+bl+cr)>>>0; h0=t;
+    }
+    var out=new Uint8Array(20); var ov=new DataView(out.buffer);
+    ov.setUint32(0,h0,true);ov.setUint32(4,h1,true);ov.setUint32(8,h2,true);ov.setUint32(12,h3,true);ov.setUint32(16,h4,true);
+    return out;
+  }
+  function hash160(data){ return ripemd160(sha256(data)); }
+
+  var SECP_P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2Fn;
+  var SECP_N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n;
+  var SECP_GX = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798n;
+  var SECP_GY = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8n;
+
+  function modP(a){ a%=SECP_P; return a<0n?a+SECP_P:a; }
+  function modN(a){ a%=SECP_N; return a<0n?a+SECP_N:a; }
+  function invP(a){
+    var lm=1n,hm=0n,low=modP(a),high=SECP_P,r,tmp;
+    while(low>1n){ r=high/low; tmp=lm; lm=hm-lm*r; hm=tmp; tmp=low; low=high-low*r; high=tmp; }
+    return modP(lm);
+  }
+  function pointAdd(P1,P2){
+    if(!P1)return P2; if(!P2)return P1;
+    var x1=P1[0],y1=P1[1],x2=P2[0],y2=P2[1], m, x3;
+    if(x1===x2 && modP(y1+y2)===0n) return null;
+    if(x1===x2 && y1===y2) m=modP(3n*x1*x1*invP(2n*y1));
+    else m=modP((y2-y1)*invP(modP(x2-x1)));
+    x3=modP(m*m-x1-x2);
+    return [x3, modP(m*(x1-x3)-y1)];
+  }
+  function pointMul(k, point){
+    if(!point) point=[SECP_GX, SECP_GY];
+    k=modN(k); if(k===0n) return null;
+    var result=null, addend=point;
+    while(k>0n){ if(k&1n) result=pointAdd(result,addend); addend=pointAdd(addend,addend); k>>=1n; }
+    return result;
+  }
+  function bytesToBig(bytes){ var x=0n,i; for(i=0;i<bytes.length;i++) x=(x<<8n)|BigInt(bytes[i]); return x; }
+  function bigToBytes(n,len){
+    if(len==null) len=32;
+    var out=new Uint8Array(len), x=n, i;
+    if(x<0n) x=0n;
+    for(i=len-1;i>=0;i--){ out[i]=Number(x&0xffn); x>>=8n; }
+    return out;
+  }
+  function isValidPriv(d){ return d>0n && d<SECP_N; }
+  function privToPub(privBytes){
+    var d=bytesToBig(privBytes);
+    if(!isValidPriv(d)) throw new Error("invalid private key");
+    var pt=pointMul(d);
+    if(!pt) throw new Error("invalid private key (point at infinity)");
+    return pt;
+  }
+  function compress(point){
+    var out=new Uint8Array(33);
+    out[0]=(point[1]&1n)===0n ? 0x02 : 0x03;
+    out.set(bigToBytes(point[0],32),1);
+    return out;
+  }
+  function xOnly(point){ return bigToBytes(point[0],32); }
+  function taggedHash(tag, data){
+    var tagHash=sha256(utf8Bytes(tag));
+    var buf=new Uint8Array(tagHash.length*2+data.length);
+    buf.set(tagHash,0); buf.set(tagHash,tagHash.length); buf.set(data,tagHash.length*2);
+    return sha256(buf);
+  }
+
+  function masterKeyFromSeed(seed){
+    if(!seed || seed.length < 16) throw new Error("seed too short");
+    var I=hmacSha512(utf8Bytes("Bitcoin seed"), seed);
+    var key=I.subarray(0,32), chain=I.subarray(32);
+    var d=bytesToBig(key);
+    if(!isValidPriv(d)) throw new Error("invalid master key");
+    return {key: new Uint8Array(key), chain: new Uint8Array(chain)};
+  }
+
+  function ckdPriv(parent, index){
+    var guard = 0;
+    while (guard++ < 1000) {
+      var data=new Uint8Array(37);
+      if(index >= 0x80000000){
+        data[0]=0; data.set(parent.key,1);
+      } else {
+        data.set(compress(privToPub(parent.key)),0);
+      }
+      data[33]=(index>>>24)&0xff; data[34]=(index>>>16)&0xff;
+      data[35]=(index>>>8)&0xff; data[36]=index&0xff;
+      var I=hmacSha512(parent.chain, data);
+      var IL=I.subarray(0,32), IR=I.subarray(32);
+      var ilNum=bytesToBig(IL);
+      if(ilNum >= SECP_N){
+        if(index === 0xffffffff) throw new Error("BIP32 derivation exhausted");
+        index = (index + 1) >>> 0;
+        continue;
+      }
+      var childNum=modN(ilNum + bytesToBig(parent.key));
+      if(childNum === 0n){
+        if(index === 0xffffffff) throw new Error("BIP32 derivation exhausted");
+        index = (index + 1) >>> 0;
+        continue;
+      }
+      return {key: bigToBytes(childNum,32), chain: new Uint8Array(IR)};
+    }
+    throw new Error("BIP32 derivation failed");
+  }
+
+  function derivePath(master, path){
+    if(!master || !master.key || !master.chain) throw new Error("missing master key");
+    var node=master;
+    var raw=String(path).replace(/^m\/?/,"");
+    if(!raw) return node;
+    var parts=raw.split("/"), i, p, hardened, num, index;
+    for(i=0;i<parts.length;i++){
+      p=parts[i];
+      if(!p) continue;
+      if(!/^\d+['h]?$/.test(p)) throw new Error("invalid derivation path segment: " + p);
+      hardened = p.charAt(p.length-1)==="'" || p.charAt(p.length-1)==="h";
+      num = parseInt(p.replace(/['h]$/,""), 10);
+      if(!(num >= 0 && num <= 0x7fffffff)) throw new Error("invalid derivation index");
+      index = hardened ? ((num + 0x80000000) >>> 0) : (num >>> 0);
+      node = ckdPriv(node, index);
+    }
+    return node;
+  }
+
+  var BECH32_CHARSET="qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  function bech32Polymod(values){
+    var GEN=[0x3b6a57b2,0x26508e6d,0x1ea119fa,0x3d4233dd,0x2a1462b3];
+    var chk=1, i, j, v, b;
+    for(i=0;i<values.length;i++){
+      v=values[i]; b=chk>>>25;
+      chk=((chk&0x1ffffff)<<5)^v;
+      for(j=0;j<5;j++) if((b>>>j)&1) chk^=GEN[j];
+    }
+    return chk>>>0;
+  }
+  function bech32HrpExpand(hrp){
+    var ret=[], i;
+    for(i=0;i<hrp.length;i++) ret.push(hrp.charCodeAt(i)>>5);
+    ret.push(0);
+    for(i=0;i<hrp.length;i++) ret.push(hrp.charCodeAt(i)&31);
+    return ret;
+  }
+  function convertBits(data, from, to, pad){
+    if(pad==null) pad=true;
+    var acc=0, bits=0, ret=[], maxv=(1<<to)-1, maxAcc=(1<<(from+to-1))-1, i, value;
+    for(i=0;i<data.length;i++){
+      value=data[i];
+      if(value < 0 || value >> from) throw new Error("convertBits invalid value");
+      acc=((acc<<from)|value) & maxAcc;
+      bits+=from;
+      while(bits>=to){ bits-=to; ret.push((acc>>bits)&maxv); }
+    }
+    if(pad){ if(bits>0) ret.push((acc<<(to-bits))&maxv); }
+    else if(bits >= from || ((acc<<(to-bits))&maxv)) throw new Error("convertBits excess padding");
+    return ret;
+  }
+  function bech32Encode(hrp, witver, witprog, encoding){
+    if(witver < 0 || witver > 16) throw new Error("invalid witness version");
+    if(!witprog || !witprog.length) throw new Error("empty witness program");
+    if(witver === 0 && witprog.length !== 20 && witprog.length !== 32) throw new Error("invalid v0 program length");
+    if(witver !== 0 && (witprog.length < 2 || witprog.length > 40)) throw new Error("invalid program length");
+    var const_ = encoding === "bech32m" ? 0x2bc830a3 : 1;
+    if(witver === 0 && encoding !== "bech32") throw new Error("v0 requires bech32");
+    if(witver !== 0 && encoding !== "bech32m") throw new Error("v1+ requires bech32m");
+    var progArr=[], i;
+    for(i=0;i<witprog.length;i++) progArr.push(witprog[i] & 0xff);
+    var data=[witver].concat(convertBits(progArr,8,5,true));
+    var values=bech32HrpExpand(hrp).concat(data).concat([0,0,0,0,0,0]);
+    var polymod=bech32Polymod(values)^const_;
+    var checksum="", result=hrp+"1";
+    for(i=0;i<6;i++) checksum+=BECH32_CHARSET[(polymod>>(5*(5-i)))&31];
+    for(i=0;i<data.length;i++) result+=BECH32_CHARSET[data[i]];
+    return result+checksum;
+  }
+  function silentPaymentEncode(hrp, version, payload66){
+    if(!payload66 || payload66.length !== 66) throw new Error("silent payment payload must be 66 bytes");
+    if(payload66[0] !== 0x02 && payload66[0] !== 0x03) throw new Error("invalid scan pubkey");
+    if(payload66[33] !== 0x02 && payload66[33] !== 0x03) throw new Error("invalid spend pubkey");
+    var arr=[], i;
+    for(i=0;i<66;i++) arr.push(payload66[i]&0xff);
+    var data=[version].concat(convertBits(arr,8,5,true));
+    var values=bech32HrpExpand(hrp).concat(data).concat([0,0,0,0,0,0]);
+    var polymod=bech32Polymod(values)^0x2bc830a3;
+    var checksum="", result=hrp+"1";
+    for(i=0;i<6;i++) checksum+=BECH32_CHARSET[(polymod>>(5*(5-i)))&31];
+    for(i=0;i<data.length;i++) result+=BECH32_CHARSET[data[i]];
+    return result+checksum;
+  }
+
+  function normalizeMnemonic(text) {
+    var s = String(text == null ? "" : text).toLowerCase();
+    s = s.replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, " ");
+    s = s.replace(/[^a-z\s]/g, " ");
+    s = s.replace(/\s+/g, " ");
+    return trimStr(s);
+  }
+  function parseSeedWords(text) {
+    var s = normalizeMnemonic(text);
+    if (!s) return [];
+    return s.split(" ");
+  }
+  function validateMnemonic(words) {
+    if (!words || !(words.length === 12 || words.length === 24)) {
+      return { ok: false, reason: "Enter exactly 12 or 24 words." };
+    }
+    var i, bits = "", idx;
+    for (i = 0; i < words.length; i++) {
+      idx = WORD_INDEX[words[i]];
+      if (idx === undefined) return { ok: false, reason: 'Unknown BIP39 word: "' + words[i] + '"' };
+      bits += ("00000000000" + idx.toString(2)).slice(-11);
+    }
+    var entBits = words.length === 12 ? 128 : 256;
+    var csBits = words.length === 12 ? 4 : 8;
+    var entropyBits = bits.slice(0, entBits);
+    var checksumBits = bits.slice(entBits, entBits + csBits);
+    var entropy = new Uint8Array(entBits / 8);
+    for (i = 0; i < entropy.length; i++) entropy[i] = parseInt(entropyBits.slice(i * 8, i * 8 + 8), 2);
+    var hash = sha256(entropy);
+    var expected = ("00000000" + hash[0].toString(2)).slice(-8).slice(0, csBits);
+    if (checksumBits !== expected) {
+      return { ok: false, reason: "Invalid checksum — not a valid BIP39 mnemonic." };
+    }
+    return { ok: true, phrase: words.join(" "), words: words, entropy: entropy };
+  }
+  function requireValidPhrase(phrase) {
+    var v = validateMnemonic(parseSeedWords(phrase));
+    if (!v.ok) throw new Error(v.reason || "Invalid seed phrase");
+    return v.phrase;
+  }
+
+  function mnemonicToSeed(phrase, passphrase) {
+    var valid = requireValidPhrase(phrase);
+    var pass = passphrase == null ? "" : String(passphrase);
+    return pbkdf2HmacSha512(nfkd(valid), nfkd("mnemonic" + pass), 2048, 64);
+  }
+  function masterFromPhrase(phrase, passphrase) {
+    return masterKeyFromSeed(mnemonicToSeed(phrase, passphrase));
+  }
+
+  function segwitAddressFromPriv(privKey) {
+    var pub = compress(privToPub(privKey));
+    if (pub.length !== 33) throw new Error("bad pubkey");
+    var prog = hash160(pub);
+    if (prog.length !== 20) throw new Error("bad hash160");
+    return bech32Encode("bc", 0, prog, "bech32");
+  }
+
+  function taprootAddressFromPriv(privKey) {
+    var d = bytesToBig(privKey);
+    if (!isValidPriv(d)) throw new Error("invalid private key");
+    var P = pointMul(d);
+    if (!P) throw new Error("invalid pubkey");
+    if ((P[1] & 1n) === 1n) {
+      d = modN(SECP_N - d);
+      P = pointMul(d);
+      if (!P || (P[1] & 1n) === 1n) throw new Error("failed to create even-Y internal key");
+    }
+    var internalX = xOnly(P);
+    var tweak = bytesToBig(taggedHash("TapTweak", internalX));
+    if (tweak >= SECP_N) throw new Error("taproot tweak out of range");
+    var Q = pointAdd(P, pointMul(tweak));
+    if (!Q) throw new Error("invalid taproot output key");
+    var out = xOnly(Q);
+    if (out.length !== 32) throw new Error("bad output key");
+    return bech32Encode("bc", 1, out, "bech32m");
+  }
+
+  function silentPaymentAddressFromMaster(master) {
+    var scan = derivePath(master, "m/352'/0'/0'/1'/0");
+    var spend = derivePath(master, "m/352'/0'/0'/0'/0");
+    var Bscan = compress(privToPub(scan.key));
+    var Bspend = compress(privToPub(spend.key));
+    var payload = new Uint8Array(66);
+    payload.set(Bscan, 0);
+    payload.set(Bspend, 33);
+    return silentPaymentEncode("sp", 0, payload);
+  }
+
+  function generateSegwitAddresses(phrase, passphrase, count) {
+    if (count == null) count = 10;
+    var master = masterFromPhrase(phrase, passphrase);
+    var addrs = [], i, node, addr;
+    for (i = 0; i < count; i++) {
+      node = derivePath(master, "m/84'/0'/0'/0/" + i);
+      addr = segwitAddressFromPriv(node.key);
+      if (!/^bc1q[ac-hj-np-z02-9]{38,58}$/.test(addr)) throw new Error("invalid segwit address encoding");
+      addrs.push(addr);
+    }
+    return addrs;
+  }
+  function generateTaprootAddresses(phrase, passphrase, count) {
+    if (count == null) count = 10;
+    var master = masterFromPhrase(phrase, passphrase);
+    var addrs = [], i, node, addr;
+    for (i = 0; i < count; i++) {
+      node = derivePath(master, "m/86'/0'/0'/0/" + i);
+      addr = taprootAddressFromPriv(node.key);
+      if (!/^bc1p[ac-hj-np-z02-9]{58}$/.test(addr)) throw new Error("invalid taproot address encoding");
+      addrs.push(addr);
+    }
+    return addrs;
+  }
+  function generateSilentPaymentAddress(phrase, passphrase) {
+    var master = masterFromPhrase(phrase, passphrase);
+    var addr = silentPaymentAddressFromMaster(master);
+    if (!/^sp1[ac-hj-np-z02-9]+$/.test(addr)) throw new Error("invalid silent payment address encoding");
+    return addr;
+  }
+
+  function rollsToEntropy256(digits) {
+    if (!digits || digits.length !== 100) throw new Error("need exactly 100 dice digits");
+    var bytes = new Uint8Array(32), di, i, carry, v, c, d;
+    for (di = 0; di < digits.length; di++) {
+      d = digits[di];
+      if (!(d >= 0 && d <= 5)) throw new Error("dice digit out of range");
+      carry = 0;
+      for (i = 31; i >= 0; i--) { v = bytes[i] * 6 + carry; bytes[i] = v & 0xff; carry = v >>> 8; }
+      c = d;
+      for (i = 31; i >= 0 && c; i--) { v = bytes[i] + c; bytes[i] = v & 0xff; c = v >>> 8; }
+    }
+    return bytes;
+  }
+  function entropyToMnemonic(entropy) {
+    if (!entropy || entropy.length !== 32) throw new Error("24-word mnemonic requires 32 bytes of entropy");
+    var hash = sha256(entropy);
+    var bits = "", i;
+    for (i = 0; i < 32; i++) bits += ("00000000" + entropy[i].toString(2)).slice(-8);
+    bits += ("00000000" + hash[0].toString(2)).slice(-8);
+    var words = [];
+    for (i = 0; i < 24; i++) words.push(WORDLIST[parseInt(bits.slice(i * 11, i * 11 + 11), 2)]);
+    var phrase = words.join(" ");
+    var check = validateMnemonic(words);
+    if (!check.ok) throw new Error("internal error: generated invalid mnemonic");
+    return { words: words, phrase: phrase };
+  }
+
+  function runSelfTest() {
+    try {
+      if (sha256(utf8Bytes("abc")).length !== 32) return "sha256 length";
+      if (bytesToHex(sha256(utf8Bytes("abc"))) !== "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad") return "sha256 abc";
+      if (bytesToHex(sha512(utf8Bytes("abc"))).slice(0, 16) !== "ddaf35a193617aba") return "sha512 abc";
+
+      var phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+      if (!validateMnemonic(phrase.split(" ")).ok) return "validate abandon";
+
+      var seedTrezor = mnemonicToSeed(phrase, "TREZOR");
+      if (bytesToHex(seedTrezor.subarray(0, 16)) !== "c55257c360c07c72029aebc1b53c05ed") return "pbkdf2 TREZOR seed";
+
+      var a84 = generateSegwitAddresses(phrase, "", 2);
+      if (a84[0] !== "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu") return "BIP84/0";
+      if (a84[1] !== "bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g") return "BIP84/1";
+
+      var a86 = generateTaprootAddresses(phrase, "", 2);
+      if (a86[0] !== "bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr") return "BIP86/0";
+      if (a86[1] !== "bc1p4qhjn9zdvkux4e44uhx8tc55attvtyu358kutcqkudyccelu0was9fqzwh") return "BIP86/1";
+
+      var a84p = generateSegwitAddresses(phrase, "TREZOR", 1)[0];
+      if (a84p === a84[0]) return "passphrase isolation";
+
+      var bad = false;
+      try { requireValidPhrase("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"); bad = true; } catch (e) {}
+      if (bad) return "accepted invalid checksum";
+
+      var sp = generateSilentPaymentAddress(phrase, "");
+      if (!/^sp1q[ac-hj-np-z02-9]{100,120}$/.test(sp)) return "silent payment format";
+
+      return null;
+    } catch (e) {
+      return "exception: " + (e && e.message ? e.message : String(e));
+    }
+  }
+
+  if (cryptoOk) {
+    var st = runSelfTest();
+    if (st) {
+      selfTestPassed = false;
+      cryptoOk = false;
+      show(compatEl);
+      setText(compatEl, "Self-test failed (" + st + "). Address generation is disabled. Do not use this build for real funds.");
+    } else {
+      selfTestPassed = true;
+    }
+  }
+
+  var netStatusEl = document.getElementById("netStatus");
+  var ONLINE_HTML = 'WARNING: Internet access detected. This tool should only be used offline. An amnesic OS like <a href="https://tails.net/" target="_blank" rel="noopener noreferrer">TAILS</a> booted from a USB flash drive is ideal to eliminate OS attack vectors.';
+  function setNetStatus(online) {
+    removeClass(netStatusEl, "online"); removeClass(netStatusEl, "offline");
+    if (online) { addClass(netStatusEl, "online"); netStatusEl.innerHTML = ONLINE_HTML; }
+    else { addClass(netStatusEl, "offline"); setText(netStatusEl, "Offline — no internet access detected"); }
+  }
+  function checkOnline() {
+    var online = true;
+    try { online = !!(typeof navigator !== "undefined" && navigator.onLine); } catch (e) {}
+    setNetStatus(online);
+  }
+  on(window, "online", function () { setNetStatus(true); });
+  on(window, "offline", function () { setNetStatus(false); });
+  checkOnline();
+
+  var generatePath = document.getElementById("generatePath");
+  var verifyPath = document.getElementById("verifyPath");
+  var pathGenerateBtn = document.getElementById("pathGenerateBtn");
+  var pathVerifyBtn = document.getElementById("pathVerifyBtn");
+  var setsEl = document.getElementById("sets");
+  var progressFill = document.getElementById("progressFill");
+  var progressBadge = document.getElementById("progressBadge");
+  var entropyBadge = document.getElementById("entropyBadge");
+  var generateBtn = document.getElementById("generateBtn");
+  var resultEl = document.getElementById("result");
+  var mnemonicEl = document.getElementById("mnemonic");
+  var copyBtn = document.getElementById("copyBtn");
+  var passphraseSection = document.getElementById("passphraseSection");
+  var passphraseInput = document.getElementById("passphraseInput");
+  var ppBarFill = document.getElementById("ppBarFill");
+  var ppCounter = document.getElementById("ppCounter");
+  var ppBadge = document.getElementById("ppBadge");
+  var addrSection = document.getElementById("addrSection");
+  var addrList = document.getElementById("addrList");
+  var addrListTitle = document.getElementById("addrListTitle");
+  var addrItems = document.getElementById("addrItems");
+  var addrError = document.getElementById("addrError");
+  var seedInput = document.getElementById("seedInput");
+  var seedWordStatus = document.getElementById("seedWordStatus");
+  var seedValidStatus = document.getElementById("seedValidStatus");
+  var verifyContinueBtn = document.getElementById("verifyContinueBtn");
+  var allInputs = [];
+  var currentPhrase = "";
+  var lastAddrType = null;
+  var passphraseTimer = null;
+
+  function getPassphrase() { return passphraseInput.value; }
+  function isPassphraseValid() { return getPassphrase().length >= MIN_PASSPHRASE; }
+
+  function resetDownstream() {
+    hide(resultEl); setText(mnemonicEl, ""); setText(copyBtn, "Copy phrase");
+    currentPhrase = ""; passphraseInput.value = "";
+    hide(passphraseSection); hide(addrSection);
+    clearAddrOutput(); lastAddrType = null; updatePassphraseUI();
+  }
+
+  function showSeedResult(phrase) {
+    var valid;
+    try { valid = requireValidPhrase(phrase); }
+    catch (e) { alert(e.message); return; }
+    var words = valid.split(" "), html = "", i;
+    for (i = 0; i < words.length; i++) {
+      html += '<div class="word"><span class="n">' + (i + 1) + ".</span>" + words[i] + "</div>";
+    }
+    mnemonicEl.innerHTML = html;
+    show(resultEl);
+    currentPhrase = valid;
+    setText(copyBtn, "Copy phrase");
+    passphraseInput.value = "";
+    show(passphraseSection); show(addrSection);
+    clearAddrOutput(); lastAddrType = null; updatePassphraseUI();
+    try { resultEl.scrollIntoView(true); } catch (e2) {}
+  }
+
+  function selectPath(path) {
+    removeClass(pathGenerateBtn, "selected"); removeClass(pathVerifyBtn, "selected");
+    removeClass(pathGenerateBtn, "btn-primary"); removeClass(pathGenerateBtn, "btn-secondary");
+    removeClass(pathVerifyBtn, "btn-primary"); removeClass(pathVerifyBtn, "btn-secondary");
+    if (path === "generate") {
+      addClass(pathGenerateBtn, "selected"); addClass(pathGenerateBtn, "btn-primary"); addClass(pathVerifyBtn, "btn-secondary");
+      show(generatePath); hide(verifyPath);
+      seedInput.value = ""; updateSeedInputUI();
+    } else {
+      addClass(pathVerifyBtn, "selected"); addClass(pathVerifyBtn, "btn-primary"); addClass(pathGenerateBtn, "btn-secondary");
+      hide(generatePath); show(verifyPath); clearDiceOnly();
+    }
+    resetDownstream();
+  }
+
+  function updatePassphraseUI() {
+    var len = getPassphrase().length;
+    var shown = Math.min(len, MIN_PASSPHRASE);
+    var pct = (shown / MIN_PASSPHRASE) * 100;
+    var color = "#ef4444";
+    if (len >= MIN_PASSPHRASE) color = "#22c55e";
+    else if (len >= 7) color = "#eab308";
+    if (len === 0) { ppBarFill.style.width = "100%"; ppBarFill.style.opacity = "0.35"; ppBarFill.style.background = "#ef4444"; }
+    else if (len >= MIN_PASSPHRASE) { ppBarFill.style.width = "100%"; ppBarFill.style.opacity = "1"; ppBarFill.style.background = "#22c55e"; }
+    else { ppBarFill.style.width = pct + "%"; ppBarFill.style.opacity = "1"; ppBarFill.style.background = color; }
+    setText(ppCounter, len + "/" + MIN_PASSPHRASE);
+    removeClass(ppCounter, "ok"); if (len >= MIN_PASSPHRASE) addClass(ppCounter, "ok");
+    setText(ppBadge, Math.min(len, MIN_PASSPHRASE) + " / " + MIN_PASSPHRASE);
+    removeClass(ppBadge, "done"); removeClass(ppBadge, "active");
+    if (len >= MIN_PASSPHRASE) addClass(ppBadge, "done");
+    else if (len > 0) addClass(ppBadge, "active");
+  }
+  function progressColor(pct) {
+    if (pct >= 100) return "#22c55e"; if (pct >= 90) return "#eab308"; if (pct >= 50) return "#f97316"; return "#ef4444";
+  }
+
+  function buildUI() {
+    var s, d, row, label, grid, status, inp;
+    for (s = 0; s < TOTAL_SETS; s++) {
+      row = document.createElement("div"); row.className = "set";
+      label = document.createElement("div"); label.className = "set-label"; setText(label, "Set " + (s + 1) + " / 10");
+      status = document.createElement("div"); status.className = "set-status"; status.id = "status-" + s; setText(status, "0/10");
+      grid = document.createElement("div"); grid.className = "dice";
+      for (d = 0; d < DICE_PER_SET; d++) {
+        inp = document.createElement("input");
+        inp.type = "text";
+        inp.setAttribute("inputmode", "numeric");
+        inp.setAttribute("maxlength", "1");
+        inp.setAttribute("autocomplete", "off");
+        inp.setAttribute("spellcheck", "false");
+        on(inp, "input", onInput); on(inp, "keydown", onKey); on(inp, "paste", onPaste);
+        on(inp, "focus", function (e) { try { (e.target || e.srcElement).select(); } catch (ex) {} });
+        grid.appendChild(inp); allInputs.push(inp);
+      }
+      row.appendChild(label); row.appendChild(status); row.appendChild(grid); setsEl.appendChild(row);
+    }
+  }
+
+  function onKey(e) {
+    e = e || window.event;
+    var t = e.target || e.srcElement, idx = allInputs.indexOf(t), key = e.key || e.keyCode;
+    if ((key === "Backspace" || key === 8) && !t.value && idx > 0) { allInputs[idx - 1].focus(); return; }
+    if ((key === "ArrowLeft" || key === 37) && idx > 0) { if (e.preventDefault) e.preventDefault(); allInputs[idx - 1].focus(); }
+    if ((key === "ArrowRight" || key === 39) && idx < allInputs.length - 1) { if (e.preventDefault) e.preventDefault(); allInputs[idx + 1].focus(); }
+    if (key === "Enter" || key === 13) { if (e.preventDefault) e.preventDefault(); if (idx < allInputs.length - 1) allInputs[idx + 1].focus(); }
+  }
+  function onPaste(e) {
+    e = e || window.event; if (e.preventDefault) e.preventDefault();
+    var clip = e.clipboardData || window.clipboardData;
+    var text = clip ? clip.getData("text") : "";
+    var digits = String(text).replace(/[^1-6]/g, "").split("");
+    var t = e.target || e.srcElement, idx = allInputs.indexOf(t), i;
+    for (i = 0; i < digits.length; i++) {
+      if (idx >= allInputs.length) break;
+      allInputs[idx].value = digits[i]; removeClass(allInputs[idx], "invalid"); addClass(allInputs[idx], "valid"); idx++;
+    }
+    if (idx < allInputs.length) allInputs[idx].focus();
+    updateProgress();
+  }
+  function onInput(e) {
+    e = e || window.event;
+    var inp = e.target || e.srcElement;
+    var v = String(inp.value).replace(/[^1-6]/g, "");
+    if (v.length > 1) v = v.charAt(v.length - 1);
+    inp.value = v;
+    removeClass(inp, "valid"); removeClass(inp, "invalid");
+    if (v !== "") {
+      if (/^[1-6]$/.test(v)) {
+        addClass(inp, "valid");
+        var idx = allInputs.indexOf(inp);
+        if (idx < allInputs.length - 1) allInputs[idx + 1].focus();
+      } else addClass(inp, "invalid");
+    }
+    updateProgress();
+  }
+  function collectRolls() {
+    var rolls = [], i, v;
+    for (i = 0; i < allInputs.length; i++) {
+      v = allInputs[i].value;
+      if (!/^[1-6]$/.test(v)) return null;
+      rolls.push(parseInt(v, 10));
+    }
+    return rolls;
+  }
+  function updateProgress() {
+    var filled = 0, s, d, setFilled, st, pct, bits;
+    for (s = 0; s < TOTAL_SETS; s++) {
+      setFilled = 0;
+      for (d = 0; d < DICE_PER_SET; d++) if (/^[1-6]$/.test(allInputs[s * DICE_PER_SET + d].value)) setFilled++;
+      filled += setFilled;
+      st = document.getElementById("status-" + s);
+      setText(st, setFilled + "/10"); removeClass(st, "ok"); if (setFilled === 10) addClass(st, "ok");
+    }
+    pct = (filled / TOTAL) * 100;
+    if (filled === 0) { progressFill.style.width = "100%"; progressFill.style.opacity = "0.35"; progressFill.style.background = "#ef4444"; }
+    else { progressFill.style.width = pct + "%"; progressFill.style.opacity = "1"; progressFill.style.background = progressColor(pct); }
+    setText(progressBadge, filled + " / " + TOTAL);
+    removeClass(progressBadge, "done"); removeClass(progressBadge, "active");
+    if (filled === TOTAL) addClass(progressBadge, "done"); else if (filled > 0) addClass(progressBadge, "active");
+    bits = filled * BITS_PER_D6;
+    setText(entropyBadge, bits.toFixed(2) + " bits of entropy");
+    removeClass(entropyBadge, "done"); removeClass(entropyBadge, "active");
+    if (filled === TOTAL) addClass(entropyBadge, "done"); else if (filled > 0) addClass(entropyBadge, "active");
+    generateBtn.disabled = filled !== TOTAL || !cryptoOk;
+  }
+
+  function showAddresses(title, addresses) {
+    hide(addrError); setText(addrError, "");
+    setText(addrListTitle, title);
+    var html = "", i;
+    for (i = 0; i < addresses.length; i++) {
+      html += '<div class="addr-item"><span class="n">' + (i + 1) + ".</span>" + addresses[i] + "</div>";
+    }
+    addrItems.innerHTML = html; show(addrList);
+  }
+  function showAddrError(msg) {
+    hide(addrList); addrItems.innerHTML = ""; setText(addrError, msg); show(addrError);
+  }
+  function clearAddrOutput() {
+    hide(addrList); addrItems.innerHTML = ""; hide(addrError); setText(addrError, "");
+  }
+
+  function runAddressType(type) {
+    if (!cryptoOk || !selfTestPassed) {
+      showAddrError("Address generation disabled: self-test failed or browser unsupported.");
+      return;
+    }
+    if (!currentPhrase) {
+      showAddrError("No seed phrase loaded.");
+      return;
+    }
+    var phrase;
+    try { phrase = requireValidPhrase(currentPhrase); currentPhrase = phrase; }
+    catch (e) {
+      lastAddrType = null;
+      showAddrError(e.message || "Invalid seed phrase.");
+      return;
+    }
+    if (!isPassphraseValid()) {
+      lastAddrType = null;
+      showAddrError("A passphrase of at least 14 characters is necessary to fully secure your funds.");
+      try { passphraseInput.focus(); } catch (e2) {}
+      return;
+    }
+    lastAddrType = type;
+    var pp = getPassphrase();
+    try {
+      if (type === "segwit") showAddresses("Native SegWit (BIP84) — m/84'/0'/0'/0/0…9", generateSegwitAddresses(phrase, pp, 10));
+      else if (type === "taproot") showAddresses("Taproot (BIP86) — m/86'/0'/0'/0/0…9", generateTaprootAddresses(phrase, pp, 10));
+      else if (type === "silent") showAddresses("Silent payment (BIP352) — m/352'/0'/0'", [generateSilentPaymentAddress(phrase, pp)]);
+      else throw new Error("unknown address type");
+    } catch (err) {
+      lastAddrType = null;
+      showAddrError("Failed to generate addresses: " + (err && err.message ? err.message : String(err)));
+    }
+  }
+
+  function generate() {
+    if (!cryptoOk) { alert("This browser cannot safely generate seeds."); return; }
+    var rolls = collectRolls();
+    if (!rolls || rolls.length !== 100) { alert("Please fill all 100 dice with values 1–6."); return; }
+    try {
+      var digits = [], i;
+      for (i = 0; i < rolls.length; i++) {
+        if (rolls[i] < 1 || rolls[i] > 6) throw new Error("invalid die face");
+        digits.push(rolls[i] - 1);
+      }
+      var result = entropyToMnemonic(rollsToEntropy256(digits));
+      showSeedResult(result.phrase);
+    } catch (e) {
+      alert("Failed to generate seed: " + (e && e.message ? e.message : String(e)));
+    }
+  }
+  function clearDiceOnly() {
+    var i;
+    for (i = 0; i < allInputs.length; i++) {
+      allInputs[i].value = ""; removeClass(allInputs[i], "valid"); removeClass(allInputs[i], "invalid");
+    }
+    updateProgress();
+  }
+  function clearAll() {
+    clearDiceOnly(); resetDownstream();
+    if (allInputs[0]) try { allInputs[0].focus(); } catch (e) {}
+  }
+  function updateSeedInputUI() {
+    var words = parseSeedWords(seedInput.value);
+    setText(seedWordStatus, words.length + " word" + (words.length === 1 ? "" : "s"));
+    removeClass(seedValidStatus, "ok"); removeClass(seedValidStatus, "bad");
+    if (words.length === 0) { setText(seedValidStatus, ""); verifyContinueBtn.disabled = true; return; }
+    var v = validateMnemonic(words);
+    if (v.ok) {
+      setText(seedValidStatus, "Valid BIP39 phrase"); addClass(seedValidStatus, "ok");
+      verifyContinueBtn.disabled = !cryptoOk;
+    } else {
+      setText(seedValidStatus, v.reason); addClass(seedValidStatus, "bad");
+      verifyContinueBtn.disabled = true;
+    }
+  }
+
+  on(pathGenerateBtn, "click", function () { selectPath("generate"); });
+  on(pathVerifyBtn, "click", function () { selectPath("verify"); });
+  on(generateBtn, "click", generate);
+  on(document.getElementById("clearBtn"), "click", clearAll);
+  on(document.getElementById("verifyClearBtn"), "click", function () {
+    seedInput.value = ""; updateSeedInputUI(); resetDownstream();
+    try { seedInput.focus(); } catch (e) {}
+  });
+  on(verifyContinueBtn, "click", function () {
+    var v = validateMnemonic(parseSeedWords(seedInput.value));
+    if (!v.ok) { updateSeedInputUI(); return; }
+    showSeedResult(v.phrase);
+  });
+  on(seedInput, "input", updateSeedInputUI);
+  on(copyBtn, "click", function () {
+    if (!currentPhrase) return;
+    var phrase;
+    try { phrase = requireValidPhrase(currentPhrase); } catch (e) { alert(e.message); return; }
+    copyText(phrase, function (ok) {
+      setText(copyBtn, ok ? "Copied" : "Copy failed");
+      setTimeout(function () { setText(copyBtn, "Copy phrase"); }, 1500);
+    });
+  });
+  on(document.getElementById("segwitBtn"), "click", function () { runAddressType("segwit"); });
+  on(document.getElementById("taprootBtn"), "click", function () { runAddressType("taproot"); });
+  on(document.getElementById("silentBtn"), "click", function () { runAddressType("silent"); });
+  on(passphraseInput, "input", function () {
+    updatePassphraseUI();
+    if (passphraseTimer) clearTimeout(passphraseTimer);
+    passphraseTimer = setTimeout(function () {
+      if (!isPassphraseValid()) {
+        if (lastAddrType || !hasClass(addrList, "hidden")) { lastAddrType = null; clearAddrOutput(); }
+        return;
+      }
+      if (lastAddrType) runAddressType(lastAddrType);
+    }, 250);
+  });
+
+  buildUI();
+  updateProgress();
+  updatePassphraseUI();
+  updateSeedInputUI();
+})();
+</script>
+</body>
+</html>
