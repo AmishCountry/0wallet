@@ -1,6 +1,6 @@
 A single HTML file which does the following:
 
-Path1 :
+Path 1:
 * generates bitcoin seed words from dice rolls
 * requires a passhprase
 * generates bitcoin addresses from seed + passphrase
