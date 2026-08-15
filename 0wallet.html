@@ -797,16 +797,19 @@
 
   function rollsToEntropy256(digits) {
     if (!digits || digits.length !== 100) throw new Error("need exactly 100 dice digits");
-    var bytes = new Uint8Array(32), di, i, carry, v, c, d;
+    // The 100 rolls (digits 0-5) carry log2(6^100) ~= 258.5 bits of entropy.
+    // SHA-256 is used as an entropy extractor to produce a uniform 256-bit
+    // value. A direct base-6 -> base-256 number conversion would introduce
+    // modulo bias, because 2^256 does not divide 6^100 (6^100 ~= 5.64 * 2^256):
+    // ~64% of the keyspace would be 20% more likely than the rest (~255.9 bits
+    // min-entropy). Hashing the roll bytes avoids that bias entirely.
+    var rollBytes = new Uint8Array(100), di, d;
     for (di = 0; di < digits.length; di++) {
       d = digits[di];
       if (!(d >= 0 && d <= 5)) throw new Error("dice digit out of range");
-      carry = 0;
-      for (i = 31; i >= 0; i--) { v = bytes[i] * 6 + carry; bytes[i] = v & 0xff; carry = v >>> 8; }
-      c = d;
-      for (i = 31; i >= 0 && c; i--) { v = bytes[i] + c; bytes[i] = v & 0xff; c = v >>> 8; }
+      rollBytes[di] = d;
     }
-    return bytes;
+    return sha256(rollBytes);
   }
   function entropyToMnemonic(entropy) {
     if (!entropy || entropy.length !== 32) throw new Error("24-word mnemonic requires 32 bytes of entropy");
